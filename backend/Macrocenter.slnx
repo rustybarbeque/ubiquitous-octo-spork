@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Macrocenter.Api.Tests/Macrocenter.Api.Tests.csproj" Id="78a7aeaa-b955-4cef-a5e7-fc069dd72c6e" />
+  <Project Path="Macrocenter.Api/Macrocenter.Api.csproj" />
+  <Project Path="Macrocenter.Domain/Macrocenter.Domain.csproj" Id="9fb260a2-3761-44e5-823c-e94fe3e0b5e3" />
+  <Project Path="Macrocenter.Infrastructure/Macrocenter.Infrastructure.csproj" Id="badf6103-93df-40f6-8294-186dff928bcf" />
+</Solution>

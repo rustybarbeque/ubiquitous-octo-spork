@@ -1,0 +1,43 @@
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editors / IDEs ---
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*.user
+*.suo
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Node / frontend ---
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/.turbo/
+frontend/.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# --- .NET / backend ---
+[Bb]in/
+[Oo]bj/
+TestResults/
+*.received.*
+*.nupkg
+*.user
+
+# --- Misc build artifacts ---
+*.tsbuildinfo

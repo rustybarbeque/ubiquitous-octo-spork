@@ -1,0 +1,33 @@
+# Local development. Compose applies this automatically on top of
+# docker-compose.yml, so plain `docker compose up` gives you hot reload.
+# For a production-shaped run, use:
+#   docker compose -f docker-compose.yml up --build
+
+services:
+  api:
+    build:
+      target: dev
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    volumes:
+      - ./backend:/src
+      # Keep Linux build output out of the Windows-side bin/obj folders.
+      - api_obj:/src/Macrocenter.Api/obj
+      - api_bin:/src/Macrocenter.Api/bin
+      - nuget_packages:/root/.nuget/packages
+
+  web:
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app
+      # Anonymous volumes so the image's node_modules / .next survive the mount.
+      - /app/node_modules
+      - /app/.next
+
+volumes:
+  api_obj:
+  api_bin:
+  nuget_packages:

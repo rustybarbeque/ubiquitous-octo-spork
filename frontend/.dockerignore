@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+.cache/
+.git/
+.env
+.env.*
+!.env.example
+Dockerfile*
+.dockerignore
+npm-debug.log*
+*.tsbuildinfo
