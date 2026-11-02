@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Emits .next/standalone, which the production Docker image runs.
+  output: "standalone",
   images: {
     remotePatterns: [
       {

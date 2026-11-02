@@ -4,10 +4,13 @@ Thumbs.db
 desktop.ini
 
 # --- Editors / IDEs ---
+.vs/
 .vscode/
 .idea/
 *.swp
 *.swo
+*.user
+*.suo
 
 # --- Environment / secrets ---
 .env
@@ -28,14 +31,13 @@ yarn-error.log*
 pnpm-debug.log*
 .pnpm-store/
 
-# --- Backend (Node) ---
-backend/node_modules/
-backend/dist/
-backend/build/
-
+# --- .NET / backend ---
+[Bb]in/
+[Oo]bj/
+TestResults/
+*.received.*
+*.nupkg
+*.user
 
 # --- Misc build artifacts ---
 *.tsbuildinfo
-.DS_Store
-
-*.md
