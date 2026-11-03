@@ -18,4 +18,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Macrocenter.Api\Macrocenter.Api.csproj" />
+    <ProjectReference Include="..\Macrocenter.Domain\Macrocenter.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

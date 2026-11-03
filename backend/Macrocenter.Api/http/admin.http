@@ -1,0 +1,244 @@
+# Macrocenter — administrative API endpoints
+#
+# One request per endpoint that requires the Admin role: catalog management,
+# user management, discount codes, and the order queue. Public and customer
+# endpoints live in customer.http.
+#
+# Run the login first and paste its token into @token below — every request
+# here needs it. The create and search requests return the ids the update and
+# delete requests need; paste those into the id variables as you go.
+
+@apiBaseUrl = http://localhost:8080
+@contentType = application/json
+
+# Seeded development administrator (backend/Macrocenter.Infrastructure/Data/DatabaseSeeder.cs).
+@adminEmail = admin@macrocenter.test
+@adminPassword = admin
+
+# --- Token -----------------------------------------------------------------
+# Run the login request below, copy the "token" value out of the response, and
+# paste it here. Tokens last 30 days, so this is once per work session.
+#
+# Visual Studio's .http editor cannot pull a value out of a previous response,
+# so this is a plain variable rather than {{login.response.body.$.token}}.
+# On VS Code with the REST Client extension you can use that form instead and
+# skip the paste entirely.
+@token = PASTE_TOKEN_HERE
+
+# --- Ids -------------------------------------------------------------------
+# Paste an id from the response of the request named in each comment.
+# from "Create a product"
+@itemId = PASTE_ITEM_ID_HERE
+
+# from "Search users"
+@userId = PASTE_USER_ID_HERE
+
+# from "Create a discount code"
+@discountCodeId = PASTE_DISCOUNT_ID_HERE
+
+# from "Every customer's orders"
+@orderId = PASTE_ORDER_ID_HERE
+
+
+### Log in as an administrator — POST /auth/login
+# Not an admin endpoint itself, but every request below needs its token.
+# @name login
+POST {{apiBaseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+
+# ---------------------------------------------------------------------------
+# Catalog management — /items
+# ---------------------------------------------------------------------------
+
+### Create a product — POST /items
+# Supplies {{itemId}} for the four requests that follow.
+# @name createItem
+POST {{apiBaseUrl}}/items
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Macrocenter Test Bench GPU",
+  "description": "A product created from admin.http to exercise the write endpoints.",
+  "imageUrl": "https://placehold.co/600x600/18181b/a1a1aa.png?text=Test%0ABench&font=roboto",
+  "category": "Graphics Cards",
+  "price": 499.99,
+  "salePrice": null,
+  "quantityAvailable": 12
+}
+
+### Replace a product — PUT /items/{id}
+# A full replacement of every editable field, not a patch.
+# @name updateItem
+PUT {{apiBaseUrl}}/items/{{itemId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Macrocenter Test Bench GPU (Rev B)",
+  "description": "Updated from admin.http.",
+  "imageUrl": "https://placehold.co/600x600/18181b/a1a1aa.png?text=Rev%0AB&font=roboto",
+  "category": "Graphics Cards",
+  "price": 549.99,
+  "salePrice": 499.99,
+  "quantityAvailable": 10
+}
+
+### Put a product on sale — PUT /items/{id}/sale
+# The promotional-sales endpoint. Send "salePrice": null to clear the sale.
+# Every existing cart reflects this on its next read.
+# @name updateSalePrice
+PUT {{apiBaseUrl}}/items/{{itemId}}/sale
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "salePrice": 429.99
+}
+
+### Set stock — PUT /items/{id}/inventory
+# @name updateInventory
+PUT {{apiBaseUrl}}/items/{{itemId}}/inventory
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "quantityAvailable": 25
+}
+
+### Delete a product — DELETE /items/{id}
+# @name deleteItem
+DELETE {{apiBaseUrl}}/items/{{itemId}}
+Authorization: Bearer {{token}}
+
+
+# ---------------------------------------------------------------------------
+# User management — /users
+# ---------------------------------------------------------------------------
+
+### Search users — GET /users
+# q matches email, first name, or last name. Supplies {{userId}} below, so
+# keep the role filter on Customer to avoid editing your own admin account.
+# @name searchUsers
+GET {{apiBaseUrl}}/users?q=student&role=Customer&sort=name-asc&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### One user — GET /users/{id}
+# @name getUser
+GET {{apiBaseUrl}}/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### Update any user — PUT /users/{id}
+# This is how an account is promoted: set "role": "Admin".
+# @name updateUser
+PUT {{apiBaseUrl}}/users/{{userId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "email": "student@macrocenter.test",
+  "firstName": "Sam",
+  "lastName": "Student",
+  "role": "Customer"
+}
+
+### Delete a user — DELETE /users/{id}
+# Destructive. Point this at an account you registered from customer.http
+# rather than at a seeded one.
+# @name deleteUser
+DELETE {{apiBaseUrl}}/users/{{userId}}
+Authorization: Bearer {{token}}
+
+
+# ---------------------------------------------------------------------------
+# Discount codes — /discount-codes
+# ---------------------------------------------------------------------------
+
+### List discount codes — GET /discount-codes
+# q matches the code or its description; activeOnly keeps only codes that
+# would work right now.
+# @name searchDiscountCodes
+GET {{apiBaseUrl}}/discount-codes?q=save&activeOnly=true&sort=code-asc&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### One discount code — GET /discount-codes/{id}
+# @name getDiscountCode
+GET {{apiBaseUrl}}/discount-codes/{{discountCodeId}}
+Authorization: Bearer {{token}}
+
+### Create a discount code — POST /discount-codes
+# Kind is "Percentage" or "FixedAmount". Supplies {{discountCodeId}}.
+# @name createDiscountCode
+POST {{apiBaseUrl}}/discount-codes
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "code": "HTTPTEST15",
+  "description": "15% off, created from admin.http",
+  "kind": "Percentage",
+  "value": 15.00,
+  "minimumSubtotal": 50.00,
+  "startsAt": "2026-01-01T00:00:00Z",
+  "endsAt": "2026-12-31T23:59:59Z",
+  "isActive": true
+}
+
+### Replace a discount code — PUT /discount-codes/{id}
+# Same body as the create: every editable field is replaced.
+# @name updateDiscountCode
+PUT {{apiBaseUrl}}/discount-codes/{{discountCodeId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "code": "HTTPTEST15",
+  "description": "$20 off, switched to a fixed amount",
+  "kind": "FixedAmount",
+  "value": 20.00,
+  "minimumSubtotal": 100.00,
+  "startsAt": null,
+  "endsAt": null,
+  "isActive": false
+}
+
+### Delete a discount code — DELETE /discount-codes/{id}
+# @name deleteDiscountCode
+DELETE {{apiBaseUrl}}/discount-codes/{{discountCodeId}}
+Authorization: Bearer {{token}}
+
+
+# ---------------------------------------------------------------------------
+# Order queue — /admin/orders
+# ---------------------------------------------------------------------------
+
+### Every customer's orders — GET /admin/orders
+# q matches customer name or email. Current versus historical orders is a
+# status filter: swap in ?status=Delivered,Cancelled for the archive.
+# Supplies {{orderId}} below.
+# @name searchOrders
+GET {{apiBaseUrl}}/admin/orders?q=student&status=Pending,Paid&fromDate=2026-01-01T00:00:00Z&sort=total-desc&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### One order in full, with its lines — GET /admin/orders/{id}
+# @name getOrder
+GET {{apiBaseUrl}}/admin/orders/{{orderId}}
+Authorization: Bearer {{token}}
+
+### Advance an order's status — PUT /admin/orders/{id}/status
+# Pending, Paid, Shipped, Delivered, or Cancelled. Any status may be set from
+# any other; this project deliberately does not model a state machine.
+# @name updateOrderStatus
+PUT {{apiBaseUrl}}/admin/orders/{{orderId}}/status
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "status": "Shipped"
+}

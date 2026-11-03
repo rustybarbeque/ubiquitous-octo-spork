@@ -1,0 +1,201 @@
+# Macrocenter — customer and public API endpoints
+#
+# One request per endpoint a shopper can reach: the public catalog, auth, the
+# cart, their own orders, and their own profile. Administrative endpoints live
+# in admin.http.
+#
+# Run top to bottom the first time: log in, paste the token into @token below,
+# then run the catalog search and paste an item id into @itemId. Everything
+# else works off those two values.
+
+@apiBaseUrl = http://localhost:8080
+@webBaseUrl = http://localhost:3000
+@contentType = application/json
+
+# Seeded development customer (backend/Macrocenter.Infrastructure/Data/DatabaseSeeder.cs).
+@customerEmail = student@macrocenter.test
+@customerPassword = password
+
+# --- Token -----------------------------------------------------------------
+# Run the login request below, copy the "token" value out of the response, and
+# paste it here. Tokens last 30 days, so this is once per work session.
+#
+# Visual Studio's .http editor cannot pull a value out of a previous response,
+# so this is a plain variable rather than {{login.response.body.$.token}}.
+# On VS Code with the REST Client extension you can use that form instead and
+# skip the paste entirely.
+@token = PASTE_TOKEN_HERE
+
+# --- Ids -------------------------------------------------------------------
+# Paste an id from the response of the request named in each comment.
+# from "Search the catalog"
+@itemId = PASTE_ITEM_ID_HERE
+
+# from "Check out", or from "My order history"
+@orderId = PASTE_ORDER_ID_HERE
+
+
+### Database health check — GET /health
+# @name health
+GET {{apiBaseUrl}}/health
+
+### Storefront page (the web container, not the API)
+GET {{webBaseUrl}}
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+### Register a new customer — POST /auth/register
+# Registration never creates an administrator. Change the email to re-run; a
+# second run with the same address is a 409.
+# @name register
+POST {{apiBaseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "new.customer@macrocenter.test",
+  "password": "password",
+  "firstName": "New",
+  "lastName": "Customer"
+}
+
+### Log in — POST /auth/login
+# Every request below reuses this response's token.
+# @name login
+POST {{apiBaseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{customerEmail}}",
+  "password": "{{customerPassword}}"
+}
+
+### The signed-in user — GET /auth/me
+# @name me
+GET {{apiBaseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+
+# ---------------------------------------------------------------------------
+# Catalog (public — no token required)
+# ---------------------------------------------------------------------------
+
+### Search the catalog — GET /items
+# Exercises every filter at once: search term, category, price window, stock,
+# sale, sort, and paging. Supplies {{itemId}} for the cart requests below.
+# @name searchItems
+GET {{apiBaseUrl}}/items?q=rtx&category=Graphics Cards&minPrice=100&maxPrice=5000&inStockOnly=true&onSaleOnly=false&sort=price-asc&page=1&pageSize=20
+
+### Distinct categories — GET /items/categories
+# @name categories
+GET {{apiBaseUrl}}/items/categories
+
+### One product — GET /items/{id}
+# @name getItem
+GET {{apiBaseUrl}}/items/{{itemId}}
+
+
+# ---------------------------------------------------------------------------
+# Cart
+# ---------------------------------------------------------------------------
+# Cart rows store only an item id and a quantity. Prices, discounts, and tax
+# are recalculated on every read, so an admin's sale-price change shows up here
+# immediately.
+
+### The current cart — GET /cart
+# @name getCart
+GET {{apiBaseUrl}}/cart
+Authorization: Bearer {{token}}
+
+### Add a product to the cart — POST /cart/items
+# Adding a product that is already in the cart increases the existing line.
+# @name addCartItem
+POST {{apiBaseUrl}}/cart/items
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "itemId": "{{itemId}}",
+  "quantity": 2
+}
+
+### Set a line's quantity — PUT /cart/items/{itemId}
+# @name updateCartItem
+PUT {{apiBaseUrl}}/cart/items/{{itemId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "quantity": 3
+}
+
+### Apply a discount code — POST /cart/discount
+# Case does not matter. SAVE10 is seeded; TAKE25 needs a $100 subtotal.
+# @name applyDiscount
+POST {{apiBaseUrl}}/cart/discount
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "code": "SAVE10"
+}
+
+### Remove the discount code — DELETE /cart/discount
+# @name removeDiscount
+DELETE {{apiBaseUrl}}/cart/discount
+Authorization: Bearer {{token}}
+
+### Remove one line — DELETE /cart/items/{itemId}
+# @name removeCartItem
+DELETE {{apiBaseUrl}}/cart/items/{{itemId}}
+Authorization: Bearer {{token}}
+
+### Empty the cart — DELETE /cart
+# Run this last: it clears what the requests above added.
+# @name clearCart
+DELETE {{apiBaseUrl}}/cart
+Authorization: Bearer {{token}}
+
+
+# ---------------------------------------------------------------------------
+# Orders
+# ---------------------------------------------------------------------------
+
+### Check out — POST /orders
+# Needs a non-empty cart, so re-run "Add a product to the cart" first. This is
+# the one moment prices are frozen, into the order's snapshot columns.
+# @name placeOrder
+POST {{apiBaseUrl}}/orders
+Authorization: Bearer {{token}}
+
+### My order history — GET /orders
+# "Current" versus "historical" is a status filter, not a second endpoint:
+# swap in ?status=Delivered,Cancelled for past orders.
+# @name myOrders
+GET {{apiBaseUrl}}/orders?status=Pending,Paid&fromDate=2026-01-01T00:00:00Z&sort=newest&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### One of my orders, with its lines — GET /orders/{id}
+# @name getMyOrder
+GET {{apiBaseUrl}}/orders/{{orderId}}
+Authorization: Bearer {{token}}
+
+
+# ---------------------------------------------------------------------------
+# Profile
+# ---------------------------------------------------------------------------
+
+### Update my own profile — PUT /users/me
+# A customer cannot change their own role; that is an admin endpoint.
+# @name updateMe
+PUT {{apiBaseUrl}}/users/me
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "email": "{{customerEmail}}",
+  "firstName": "Sam",
+  "lastName": "Student"
+}
