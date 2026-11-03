@@ -35,7 +35,7 @@ before it starts, so the API never comes up against a database that is not
 accepting connections yet. The API then has its own healthcheck on `/health`.
 
 All configuration is environment variables, read from `.env`. Nothing is
-hardcoded, which is what keeps the stack portable to a cloud host later.
+hardcoded.
 
 ### Backend layout
 
@@ -48,10 +48,10 @@ backend/
 ```
 
 Dependencies point one direction only: `Api → Infrastructure → Domain`. Requests
-flow `Controllers → Services → DbContext`, and DTOs — never EF entities — cross
+flow `Controllers → Services → DbContext`, and DTOs (never EF entities) cross
 the HTTP boundary.
 
-The API is a conventional controller-based ASP.NET Core Web API. Seven tables
+The API is a controller-based ASP.NET Core Web API. Seven tables
 (`users`, `items`, `carts`, `cart_items`, `discount_codes`, `orders`,
 `order_lines`), JWT bearer authentication with an `Admin` role, RFC 7807 problem
 responses, and the same paged envelope on every list endpoint.
@@ -69,28 +69,6 @@ Full write-ups:
 | --- | --- |
 | [`docs/architecture.md`](docs/architecture.md) | Data model, relationships, pricing rules, auth, and the deliberate shortcuts |
 | [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) | Every endpoint, with request and response examples |
-| [`docs/TEAMMATE_TASKS.md`](docs/TEAMMATE_TASKS.md) | The two teammate assignments |
-
----
-
-## A note on shells
-
-Commands below are written to work **as-is in Windows PowerShell** (including the
-Developer PowerShell terminal inside Visual Studio), Command Prompt, and Git Bash.
-
-One Windows gotcha worth knowing: in Windows PowerShell, **`curl` is an alias for
-`Invoke-WebRequest`**, not the real curl. So a normal curl command fails:
-
-```
-PS> curl -I http://localhost:3000
-Cannot process command because of one or more missing mandatory parameters: Uri.
-```
-
-Write **`curl.exe`** instead. That bypasses the alias and runs the real curl that
-ships with Windows, and it behaves identically in every shell. Every command in
-this README uses `curl.exe` for that reason.
-
----
 
 ## Local development
 
@@ -99,13 +77,13 @@ this README uses `curl.exe` for that reason.
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes
   Docker Compose). This is the only hard requirement — the containers carry the
   .NET SDK and Node.
-- Optionally the [.NET 10 SDK](https://dotnet.microsoft.com/download) and
+- OPTIONALLY the [.NET 10 SDK](https://dotnet.microsoft.com/download) and
   [Node 22+](https://nodejs.org/), if you want to build or run either app outside
-  of Docker. Visual Studio 2022+ works too.
+  of Docker (I don't recommend).
 
 ### First run
 
-Create your local environment file — never commit it:
+Create your local environment file, PLEASE never commit it:
 
 ```
 Copy-Item .env.example .env     # PowerShell
@@ -126,12 +104,11 @@ docker compose up --build
 | Swagger UI | http://localhost:8080/swagger |
 | Postgres   | `localhost:5432`              |
 
-A cold first run takes a little longer, because the API waits for Postgres to
-report healthy before it starts.
+The first run right take awhile because the API needs to make sure it can connect to the database.
 
 On startup in Development the API **applies any pending migrations and seeds
 the database itself**, so there is nothing to run by hand. You get the same
-twelve products the storefront shows, two discount codes, and two accounts:
+twelve products the storefront shows, two discount codes, and two accounts. Let's not change these to make devleopment between us easier (migrations are a pain).
 
 | Email | Password | Role |
 | ----- | -------- | ---- |
@@ -145,7 +122,8 @@ deliberate shortcuts in [`docs/architecture.md`](docs/architecture.md).
 The quickest way to drive the API is Swagger UI at
 <http://localhost:8080/swagger>: call `POST /auth/login` with one of the
 accounts above, copy the `token` from the response, then click **Authorize** and
-paste it in.
+paste it in. See [Testing the API](#testing-the-api) for the token flow in full,
+and for the API client worth installing.
 
 ### Database migrations
 
@@ -204,7 +182,7 @@ picked up live. To run the production-shaped images instead:
 docker compose -f docker-compose.yml up --build
 ```
 
-### Running the API outside Docker (Visual Studio F5)
+### Running the API outside Docker (Not Recommended)
 
 The API can run on your machine against the containerized database. Start the
 database first — it publishes port 5432 to the host:
@@ -224,6 +202,172 @@ http://localhost:5203/swagger. The localhost connection string lives in
 `backend/Macrocenter.Api/appsettings.Development.json`; Compose overrides it via
 `ConnectionStrings__DefaultConnection`, so the containerized API still reaches
 the `db` service instead.
+
+---
+
+## Testing the API
+
+Almost every endpoint makes you sign in first, and that is the single thing that
+trips everyone up. Here is the whole pattern.
+
+Almost every endpoint requires you to sign in first to see if you have authorization first. This can make testing tricky if you don't undertand. Here is how to use the API with authentication.
+
+### Which endpoints are open
+
+| Endpoints | Who can call them |
+| --- | --- |
+| `/health`, `GET /items`, `GET /items/categories`, `GET /items/{id}` | Anyone, no token needed |
+| `GET /auth/me`, all of `/cart`, all of `/orders`, `PUT /users/me` | Any signed-in user |
+| All of `/admin/orders` and `/discount-codes`, the rest of `/users`, and the `POST`/`PUT`/`DELETE` writes on `/items` | Administrators only |
+
+This is why typing <http://localhost:8080/users> into a browser returns `401`
+instead of a list of users — a browser address bar cannot attach a token. It is
+the API working correctly, not a bug. Open <http://localhost:8080/items>
+instead and you get JSON immediately, because the catalog is public.
+
+### Step 1 — trade your password for a token
+
+Send one of the seeded accounts above to `POST /auth/login`:
+
+```
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@macrocenter.test",
+  "password": "admin"
+}
+```
+
+You get back a token, when it expires, and who you are:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1... (about 400 characters in all) ...JXwpQlcgYFRthjOdigObnxLyJO9V9hwOcY0slYkAWjE",
+  "expiresAt": "2026-12-02T22:09:14.5186962+00:00",
+  "user": {
+    "id": "01a19e1b-57f4-7803-810f-c10daf3c731b",
+    "email": "admin@macrocenter.test",
+    "fullName": "Ada Admin",
+    "role": "Admin",
+    "isAdmin": true
+  }
+}
+```
+
+### What the token is
+
+A JSON Web Token: one long string, roughly 400 characters, in three parts
+separated by dots.
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9 . eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwL... . JXwpQlcgYFRthjOdigObnxLyJO9V9hwOcY0slYkAWjE
+└──────────── header ──────────────┘   └──────── payload ───────────────┘   └──────────── signature ─────────────────┘
+```
+
+The middle part is only Base64-encoded, not encrypted, so you can paste the
+whole token into <https://jwt.io> and read what it says. Inside are your user
+id, your email, your **role**, and an expiry. That role claim is exactly how
+`[Authorize(Roles = "Admin")]` decides whether to let you through, so an admin
+token and a customer token behave differently on the same URL.
+
+Three practical notes:
+
+- **It lasts 30 days** (`expiresAt` tells you when), so you get one per project
+  session, not one per request.
+- **There are no refresh tokens.** When it expires, log in again.
+- **Copy the whole thing** — no quotes around it, no line breaks in the middle.
+  A truncated token fails the same way a missing one does.
+
+### Step 2 — send it on every other request
+
+Add one header. The word `Bearer`, a single space, then the token:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRw...
+```
+
+That is the entire mechanism. From PowerShell:
+
+```
+curl.exe http://localhost:8080/users -H "Authorization: Bearer eyJhbGciOi..."
+```
+
+### Reading what comes back
+
+| Status | What it means | What to do |
+| --- | --- | --- |
+| `401 Unauthorized` | No token, a malformed one, or an expired one | Log in and add the `Authorization` header |
+| `403 Forbidden` | Your token is valid, but you are a customer and the endpoint needs an admin | Log in as `admin@macrocenter.test` |
+| `400 Bad Request` | Your JSON failed validation | Read the `errors` object in the response; it names the offending fields |
+| `404 Not Found` | No row with that id | Re-read the id from a list endpoint; ids are GUIDs and easy to mistype |
+
+Telling `401` from `403` is the useful habit here: `401` means "I don't know who
+you are", `403` means "I know who you are and you may not do this."
+
+### Pick a tool
+
+#### Bruno (I recommend Bruno)
+
+[Bruno](https://www.usebruno.com) is a free, open-source API client. It is the
+one worth installing: no account or sign-in, it works entirely offline, and it
+stores a collection as plain text files you can store on your computer so you can save and reuse them easily
+
+First-time setup, about two minutes:
+
+1. **Collection** → New Collection, name it `Macrocenter`.
+2. Create an **Environment** called `Local` with a variable
+   `baseUrl` = `http://localhost:8080`, and an empty one called `token`.
+3. New request, `POST`, URL `{{baseUrl}}/auth/login`, Body → JSON, paste the
+   login body from Step 1. Send it.
+4. Copy the `token` from the response into the `token` environment variable.
+5. On every other request, open the **Auth** tab, choose **Bearer Token**, and
+   enter `{{token}}`.
+
+Now switching between admin and customer is just editing one variable.
+
+You can also skip step 4 permanently. Put this in the login request's
+**Script → Post Response** tab and the token stores itself every time you log
+in:
+
+```js
+bru.setEnvVar("token", res.body.token);
+```
+
+#### Swagger UI (runs in browser, you don't have to install)
+
+Already running at <http://localhost:8080/swagger>. Call `POST /auth/login`,
+copy the `token`, click the **Authorize** button at the top right, and paste it
+in. Every request on the page then carries it.
+
+One gotcha: paste the **raw token with no `Bearer ` prefix**. Swagger adds that
+itself, and `Bearer Bearer eyJ...` is a `401`.
+
+Swagger is the fastest way to explore, since it lists every endpoint with its
+documentation and example bodies. It is clumsier than Bruno for repeating a
+sequence of calls.
+
+You also can't save your work nearly as easy.
+
+#### The `.http` files in this repo
+
+Checked in at `backend/Macrocenter.Api/http/`, one request per endpoint:
+
+| File | Contents |
+| --- | --- |
+| `customer.http` | The public and customer endpoints — auth, catalog, cart, orders, profile |
+| `admin.http` | The admin-only endpoints — catalog writes, users, discount codes, order queue |
+
+Open either one in Visual Studio and click **Send request** above any entry. Run
+the login at the top first, then paste its token over `PASTE_TOKEN_HERE` in the
+variables block; the rest of the file works off that. A few requests also need
+an id — each has a comment naming the request whose response supplies it.
+
+Visual Studio's `.http` editor cannot copy a value out of one response into the
+next request, which is why the token is a manual paste. VS Code with the REST
+Client extension can, if you prefer that.
+
+This is more of a relic from an earlier time in development before I added authentication to the program, I'm leaving it in because it's an easy way to explore API endpoints and example requests.
 
 ---
 
@@ -335,28 +479,6 @@ the whole design:
   price is unchanged.
 - **Cart pricing is live.** Put something in a cart, change its sale price as an
   admin, then re-read the cart. The new price is already there.
-
-### The two teammate assignments
-
-This is a group project, and two small tasks are deliberately left open for
-teammates who are newer to full-stack work. Each is **one method that already
-works**; the task is a single specific improvement to it, with the expected
-behavior already written as skipped tests.
-
-| Task | File | Method |
-| --- | --- | --- |
-| 1. A sale price should actually be a discount | `backend/Macrocenter.Domain/Pricing/CartCalculator.cs` | `IsOnSale` |
-| 2. Round sales tax the way a cash register does | `backend/Macrocenter.Domain/Pricing/SalesTaxCalculator.cs` | `CalculateTax` |
-
-Find them by searching the repository for `TEAM TASK`. Each one is marked with
-a comment banner saying what to implement and which tests to un-skip.
-
-**Read [`docs/TEAMMATE_TASKS.md`](docs/TEAMMATE_TASKS.md) first** — it has the
-expected inputs and outputs for both, and a step-by-step checklist.
-
-These are genuine but small contributions, not missing features. The site works
-correctly whether or not either is finished, and the test suite is green before
-and after.
 
 ### Troubleshooting
 

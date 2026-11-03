@@ -4,9 +4,9 @@
 # user management, discount codes, and the order queue. Public and customer
 # endpoints live in customer.http.
 #
-# Run the login first — every request below reuses its token. The create
-# requests are named, so the update and delete requests reuse the id they
-# return instead of a pasted GUID.
+# Run the login first and paste its token into @token below — every request
+# here needs it. The create and search requests return the ids the update and
+# delete requests need; paste those into the id variables as you go.
 
 @apiBaseUrl = http://localhost:8080
 @contentType = application/json
@@ -15,11 +15,29 @@
 @adminEmail = admin@macrocenter.test
 @adminPassword = admin
 
-@token = {{login.response.body.$.token}}
-@itemId = {{createItem.response.body.$.id}}
-@userId = {{searchUsers.response.body.$.items[0].id}}
-@discountCodeId = {{createDiscountCode.response.body.$.id}}
-@orderId = {{searchOrders.response.body.$.items[0].id}}
+# --- Token -----------------------------------------------------------------
+# Run the login request below, copy the "token" value out of the response, and
+# paste it here. Tokens last 30 days, so this is once per work session.
+#
+# Visual Studio's .http editor cannot pull a value out of a previous response,
+# so this is a plain variable rather than {{login.response.body.$.token}}.
+# On VS Code with the REST Client extension you can use that form instead and
+# skip the paste entirely.
+@token = PASTE_TOKEN_HERE
+
+# --- Ids -------------------------------------------------------------------
+# Paste an id from the response of the request named in each comment.
+# from "Create a product"
+@itemId = PASTE_ITEM_ID_HERE
+
+# from "Search users"
+@userId = PASTE_USER_ID_HERE
+
+# from "Create a discount code"
+@discountCodeId = PASTE_DISCOUNT_ID_HERE
+
+# from "Every customer's orders"
+@orderId = PASTE_ORDER_ID_HERE
 
 
 ### Log in as an administrator — POST /auth/login

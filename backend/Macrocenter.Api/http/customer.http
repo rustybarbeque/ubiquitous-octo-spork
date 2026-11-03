@@ -4,9 +4,9 @@
 # cart, their own orders, and their own profile. Administrative endpoints live
 # in admin.http.
 #
-# Run top to bottom the first time. Requests are chained by name, so the login
-# below supplies the bearer token and the catalog search supplies the item id
-# that the cart requests use — no GUIDs to paste by hand.
+# Run top to bottom the first time: log in, paste the token into @token below,
+# then run the catalog search and paste an item id into @itemId. Everything
+# else works off those two values.
 
 @apiBaseUrl = http://localhost:8080
 @webBaseUrl = http://localhost:3000
@@ -16,9 +16,23 @@
 @customerEmail = student@macrocenter.test
 @customerPassword = password
 
-@token = {{login.response.body.$.token}}
-@itemId = {{searchItems.response.body.$.items[0].id}}
-@orderId = {{placeOrder.response.body.$.id}}
+# --- Token -----------------------------------------------------------------
+# Run the login request below, copy the "token" value out of the response, and
+# paste it here. Tokens last 30 days, so this is once per work session.
+#
+# Visual Studio's .http editor cannot pull a value out of a previous response,
+# so this is a plain variable rather than {{login.response.body.$.token}}.
+# On VS Code with the REST Client extension you can use that form instead and
+# skip the paste entirely.
+@token = PASTE_TOKEN_HERE
+
+# --- Ids -------------------------------------------------------------------
+# Paste an id from the response of the request named in each comment.
+# from "Search the catalog"
+@itemId = PASTE_ITEM_ID_HERE
+
+# from "Check out", or from "My order history"
+@orderId = PASTE_ORDER_ID_HERE
 
 
 ### Database health check — GET /health
