@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Product, SortOption } from "@/lib/types";
 import StoreHeader from "@/components/header/StoreHeader";
 import ProductGrid from "@/components/store/ProductGrid";
-import CartDrawer from "@/components/cart/CartDrawer";
+import { useCart } from "@/components/cart/CartProvider";
 
 interface StoreExperienceProps {
   products: Product[];
@@ -13,7 +13,7 @@ interface StoreExperienceProps {
 export default function StoreExperience({ products }: StoreExperienceProps) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortOption>("relevance");
-  const [cartOpen, setCartOpen] = useState(false);
+  const { addItem, pendingItemIds } = useCart();
 
   const visibleProducts = useMemo(() => {
     const filtered = products.filter((product) => {
@@ -43,20 +43,14 @@ export default function StoreExperience({ products }: StoreExperienceProps) {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-zinc-50">
-      <StoreHeader
-        cartItemCount={0}
-        onCartClick={() => setCartOpen(true)}
-        query={query}
-        onQueryChange={setQuery}
-      />
+      <StoreHeader query={query} onQueryChange={setQuery} />
       <ProductGrid
         products={visibleProducts}
-        onAddToCart={() => {}}
+        onAddToCart={addItem}
+        pendingItemIds={pendingItemIds}
         sort={sort}
         onSortChange={setSort}
       />
-
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   );
 }

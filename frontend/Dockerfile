@@ -12,6 +12,11 @@ RUN npm ci
 
 # ---- dev: hot reload ---------------------------------------------------------
 # Used by docker-compose.override.yml, which bind-mounts frontend/ over /app.
+# Runs Turbopack (Next 16's default) for fast page loads. Turbopack relies on
+# native file events, which don't cross a Windows -> Docker bind mount, so on
+# Windows edits aren't picked up live: run `docker compose restart web` after
+# changing files. (`next dev --webpack` would honor WATCHPACK_POLLING and
+# reload live, at the cost of much slower page compiles.)
 FROM base AS dev
 ENV NODE_ENV=development \
     WATCHPACK_POLLING=true \

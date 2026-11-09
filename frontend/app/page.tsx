@@ -1,6 +1,7 @@
 import StoreExperience from "@/components/store/StoreExperience";
-import { MOCK_PRODUCTS } from "@/lib/mock-data";
+import { getProducts } from "@/lib/services/product-service";
 
-export default function Home() {
-  return <StoreExperience products={MOCK_PRODUCTS} />;
+export default async function Home() {
+  const products = await getProducts();
+  return <StoreExperience products={products} />;
 }

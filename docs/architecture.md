@@ -231,6 +231,9 @@ chosen over hardening. These were choices, not oversights:
 - **No shipping address, payment, or shipping cost.** Checkout is "turn this
   cart into an order". Orders start `Pending` and an administrator advances the
   status.
+- **The browser keeps the JWT in `localStorage`.** Simple and survives
+  reloads; an `httpOnly` cookie would resist XSS better but needs CSRF
+  handling and a same-site API.
 - **Order status transitions are unvalidated.** `Pending` straight to
   `Delivered` is legal. A state machine would be overengineering here.
 
@@ -256,15 +259,17 @@ chosen over hardening. These were choices, not oversights:
   once; it moved because a dedicated sales-tax class was wanted (see
   `docs/TEAMMATE_TASKS.md`), and `PricingService` is handed a configured
   instance of it.
-- **Every list endpoint is paged, including the public catalog.** One
-  consequence is worth knowing: the frontend's `Product[]` type expects a flat
-  array, so `GET /items` is not a drop-in for it. Wiring the storefront to the
-  API will mean reading `response.items` — a frontend change, which per
-  `CLAUDE.md` needs to be agreed first. Nothing is broken today, because the
-  frontend still renders from `frontend/lib/mock-data.ts`.
-- **The seeded catalog matches the frontend's mock data**, including the same
-  `placehold.co` image URLs. That host is the only one whitelisted in the
-  frontend's `next.config.ts`, and frontend source is out of scope to change.
+- **Every list endpoint is paged, including the public catalog.** The
+  storefront wants the whole catalog at once (it searches and sorts
+  client-side), so `frontend/lib/services/product-service.ts` walks every page
+  of `GET /items` at the maximum page size and flattens `response.items`.
+- **Product images are URLs from any host.** An administrator pastes a link
+  rather than uploading a file, which needs no file storage and keeps cloud
+  hosting simple. The frontend sets `images.unoptimized` so browsers load
+  images directly instead of through Next's resizing proxy (which would need
+  every host allow-listed), and a broken link falls back to a local
+  placeholder. Seeded products use generated `placehold.co` images, and the
+  admin item form can generate one in the same style.
 
 ## Testing approach
 

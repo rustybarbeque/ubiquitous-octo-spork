@@ -17,9 +17,11 @@ interface ProductGridProps {
   onAddToCart: (product: Product) => void;
   sort: SortOption;
   onSortChange: (value: SortOption) => void;
+  /** Products with an add-to-cart request in flight. */
+  pendingItemIds: ReadonlySet<string>;
 }
 
-export default function ProductGrid({ products, onAddToCart, sort, onSortChange }: ProductGridProps) {
+export default function ProductGrid({ products, onAddToCart, sort, onSortChange, pendingItemIds }: ProductGridProps) {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center justify-end gap-3 whitespace-nowrap bg-white px-4 py-3 sm:px-6">
@@ -43,7 +45,12 @@ export default function ProductGrid({ products, onAddToCart, sort, onSortChange 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                onAddToCart={onAddToCart}
+                adding={pendingItemIds.has(product.id)}
+              />
             ))}
           </div>
         </div>

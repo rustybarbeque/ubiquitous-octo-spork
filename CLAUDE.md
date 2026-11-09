@@ -38,12 +38,38 @@ is what makes an admin's sale-price or discount change show up immediately in
 carts that already exist. Prices are frozen exactly once, at checkout, into
 `OrderLine` snapshot columns.
 
+## Frontend conventions
+
+The frontend is fully wired to the API: storefront, auth, account, cart,
+checkout, order history, and the `/admin` back end. Next.js 16 (App Router),
+React 19, Ant Design 6, Tailwind 4, lucide icons.
+This Next.js version differs from older training data, so check
+`frontend/node_modules/next/dist/docs/` before using an unfamiliar API.
+
+- API calls live in `frontend/lib/services/*-service.ts`, one file per area
+  (products, auth, cart, ...). Components never call `fetch` directly.
+- Server components call the API at `API_URL` (`http://api:8080` in Compose);
+  browser code calls it at `NEXT_PUBLIC_API_URL` through
+  `frontend/lib/api-client.ts`, which also turns ProblemDetails errors into
+  readable messages.
+- The API computes all money (sale prices, discounts, tax, totals). The
+  frontend displays those numbers and never recalculates them.
+- Auth is a JWT kept in `localStorage` and exposed through `useAuth()` from
+  `frontend/components/auth/AuthProvider.tsx`.
+- Pages that need a signed-in user wrap their content in `<RequireAuth>`;
+  admin pages sit under `app/admin/`, whose layout applies `<RequireAdmin>`.
+- Product images may come from any host: `next.config.ts` sets
+  `images.unoptimized`, and `components/ProductImage.tsx` swaps in a local
+  fallback when a URL is broken. Use `ProductImage`, not `next/image`, for
+  product pictures.
+- Keep the existing look: zinc palette, Ant Design components, Tailwind for
+  layout.
+- The dev container runs Turbopack, whose file watcher misses edits across the
+  Windows bind mount. After changing frontend files, run
+  `docker compose restart web` before checking them in the browser.
+
 ## Scope rules
 
-- **Do not modify frontend source.** The frontend needs only to build and run in
-  its container. The single exception is `output: "standalone"` in
-  `next.config.ts`, which the production image requires. If something else seems
-  to need a frontend change, stop and ask.
 - **No Azure work.** Cloud hosting is a stretch goal. Avoid choices that would
   make containerized deployment harder later.
 - One feature branch per module, reviewed via pull request before merging to

@@ -22,8 +22,8 @@ browser  ──>  web   (Next.js, :3000)
 
 - **`web`** serves the storefront. It talks to the API at `NEXT_PUBLIC_API_URL`
   from the browser, and at `API_URL` (`http://api:8080`) from server components.
-  It currently renders from mock data in `frontend/lib/mock-data.ts` and does not
-  call the API yet.
+  Every page reads from and writes to the API: the storefront, accounts, cart,
+  checkout, order history, and the administrative back end at `/admin`.
 - **`api`** is the only thing that touches the database. It finds Postgres at
   hostname `db` — Compose gives every service a DNS name on its private network,
   so no IP addresses are ever hardcoded.
