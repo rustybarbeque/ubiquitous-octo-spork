@@ -60,7 +60,7 @@ public class SalesTaxCalculatorTests
 
     // --- Team Task 2: round like a register, and never go negative ----------
 
-    [Fact(Skip = "TEAM TASK 2 — delete this Skip when you implement it.")]
+    [Fact]
     public void TeamTask2_RoundsAHalfCentUp()
     {
         // 10.00 * 8.25% is exactly 0.825. A register charges 0.83; C#'s default
@@ -68,13 +68,13 @@ public class SalesTaxCalculatorTests
         Assert.Equal(0.83m, new SalesTaxCalculator().CalculateTax(10.00m));
     }
 
-    [Fact(Skip = "TEAM TASK 2 — delete this Skip when you implement it.")]
+    [Fact]
     public void TeamTask2_NegativeAmount_IsNotTaxed()
     {
         Assert.Equal(0m, new SalesTaxCalculator().CalculateTax(-50m));
     }
 
-    [Fact(Skip = "TEAM TASK 2 — delete this Skip when you implement it.")]
+    [Fact]
     public void TeamTask2_NeverReturnsANegativeAmount()
     {
         Assert.True(new SalesTaxCalculator().CalculateTax(-0.01m) >= 0m);
